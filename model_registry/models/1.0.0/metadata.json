@@ -1,0 +1,75 @@
+{
+  "version": "1.0.0",
+  "training_date": "2026-02-22T03:01:01.131793",
+  "performance_metrics": {
+    "loss": 0.0028702199303855497,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+  },
+  "training_config": {
+    "model_name": "microsoft/codebert-base",
+    "epochs": 3,
+    "learning_rate": 2e-05,
+    "batch_size": 16,
+    "max_length": 512,
+    "warmup_steps": 500,
+    "output_dir": "trained_model"
+  },
+  "history": [
+    {
+      "epoch": 1,
+      "train_loss": 0.6858223472322736,
+      "loss": 0.6556983987490336,
+      "precision": 0.6464088397790055,
+      "recall": 1.0,
+      "f1": 0.785234899328859,
+      "confusion_matrix": [
+        [
+          59,
+          64
+        ],
+        [
+          0,
+          117
+        ]
+      ]
+    },
+    {
+      "epoch": 2,
+      "train_loss": 0.37636833739067826,
+      "loss": 0.019386903072396915,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "confusion_matrix": [
+        [
+          123,
+          0
+        ],
+        [
+          0,
+          117
+        ]
+      ]
+    },
+    {
+      "epoch": 3,
+      "train_loss": 0.014723117330244609,
+      "loss": 0.0028876482353856164,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "confusion_matrix": [
+        [
+          123,
+          0
+        ],
+        [
+          0,
+          117
+        ]
+      ]
+    }
+  ]
+}

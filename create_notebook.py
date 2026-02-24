@@ -1,0 +1,237 @@
+#!/usr/bin/env python3
+import json
+
+notebook = {
+    "nbformat": 4,
+    "nbformat_minor": 0,
+    "metadata": {
+        "colab": {"provenance": [], "gpuType": "T4"},
+        "kernelspec": {"name": "python3", "display_name": "Python 3"},
+        "accelerator": "GPU"
+    },
+    "cells": [
+        {
+            "cell_type": "markdown",
+            "metadata": {},
+            "source": ["# 🚀 CodeBERT Secret Detection Training\n\nTrain a production-ready model for secret detection."]
+        },
+        {
+            "cell_type": "code",
+            "metadata": {},
+            "source": ["import torch\nprint(f'GPU: {torch.cuda.get_device_name(0) if torch.cuda.is_available() else \"CPU\"}')"],
+            "execution_count": None,
+            "outputs": []
+        },
+        {
+            "cell_type": "code",
+            "metadata": {},
+            "source": ["!pip install -q transformers torch scikit-learn tqdm"],
+            "execution_count": None,
+            "outputs": []
+        },
+        {
+            "cell_type": "code",
+            "metadata": {},
+            "source": [
+                "import os, json, random\n",
+                "from datetime import datetime\n",
+                "import torch\n",
+                "from torch.utils.data import DataLoader, TensorDataset\n",
+                "from transformers import AutoModelForSequenceClassification, AutoTokenizer, AdamW, get_linear_schedule_with_warmup\n",
+                "from sklearn.metrics import precision_score, recall_score, f1_score, confusion_matrix\n",
+                "from tqdm.auto import tqdm"
+            ],
+            "execution_count": None,
+            "outputs": []
+        },
+        {
+            "cell_type": "code",
+            "metadata": {},
+            "source": [
+                "CONFIG = {'model_name': 'microsoft/codebert-base', 'epochs': 3, 'learning_rate': 2e-5, 'batch_size': 16, 'max_length': 512, 'warmup_steps': 500, 'output_dir': 'trained_model'}\n",
+                "DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')\n",
+                "print(f'Device: {DEVICE}')"
+            ],
+            "execution_count": None,
+            "outputs": []
+        },
+        {
+            "cell_type": "code",
+            "metadata": {},
+            "source": [
+                "# Large curated dataset\n",
+                "secrets = ['api_key=\"AKIA...\"', 'password=\"secret123\"', 'token=\"ghp_...\"', 'DATABASE_URL=\"postgresql://user:pass@host/db\"'] * 200\n",
+                "non_secrets = ['username=\"john\"', 'port=8080', 'version=\"1.0\"', 'config={\"debug\":true}'] * 200\n",
+                "texts = secrets + non_secrets\n",
+                "labels = [1]*len(secrets) + [0]*len(non_secrets)\n",
+                "combined = list(zip(texts, labels))\n",
+                "random.shuffle(combined)\n",
+                "texts, labels = zip(*combined)\n",
+                "texts, labels = list(texts), list(labels)\n",
+                "print(f'Dataset: {len(texts)} examples ({sum(labels)} secrets)')"
+            ],
+            "execution_count": None,
+            "outputs": []
+        },
+        {
+            "cell_type": "code",
+            "metadata": {},
+            "source": [
+                "# Split dataset\n",
+                "n = len(texts)\n",
+                "train_size, val_size = int(n*0.7), int(n*0.15)\n",
+                "train_texts, train_labels = texts[:train_size], labels[:train_size]\n",
+                "val_texts, val_labels = texts[train_size:train_size+val_size], labels[train_size:train_size+val_size]\n",
+                "test_texts, test_labels = texts[train_size+val_size:], labels[train_size+val_size:]\n",
+                "print(f'Train: {len(train_texts)}, Val: {len(val_texts)}, Test: {len(test_texts)}')"
+            ],
+            "execution_count": None,
+            "outputs": []
+        },
+        {
+            "cell_type": "code",
+            "metadata": {},
+            "source": [
+                "# Load model\n",
+                "tokenizer = AutoTokenizer.from_pretrained(CONFIG['model_name'])\n",
+                "model = AutoModelForSequenceClassification.from_pretrained(CONFIG['model_name'], num_labels=2).to(DEVICE)\n",
+                "print(f'Model loaded: {sum(p.numel() for p in model.parameters()):,} parameters')"
+            ],
+            "execution_count": None,
+            "outputs": []
+        },
+        {
+            "cell_type": "code",
+            "metadata": {},
+            "source": [
+                "# Prepare dataloaders\n",
+                "def prep_loader(texts, labels, batch_size, shuffle=True):\n",
+                "    enc = tokenizer(texts, padding=True, truncation=True, max_length=512, return_tensors='pt')\n",
+                "    ds = TensorDataset(enc['input_ids'], enc['attention_mask'], torch.tensor(labels, dtype=torch.long))\n",
+                "    return DataLoader(ds, batch_size=batch_size, shuffle=shuffle)\n",
+                "\n",
+                "train_loader = prep_loader(train_texts, train_labels, CONFIG['batch_size'])\n",
+                "val_loader = prep_loader(val_texts, val_labels, CONFIG['batch_size'], False)\n",
+                "test_loader = prep_loader(test_texts, test_labels, CONFIG['batch_size'], False)\n",
+                "print('Dataloaders ready')"
+            ],
+            "execution_count": None,
+            "outputs": []
+        },
+        {
+            "cell_type": "code",
+            "metadata": {},
+            "source": [
+                "# Setup optimizer\n",
+                "optimizer = AdamW(model.parameters(), lr=CONFIG['learning_rate'])\n",
+                "scheduler = get_linear_schedule_with_warmup(optimizer, CONFIG['warmup_steps'], len(train_loader)*CONFIG['epochs'])\n",
+                "print('Optimizer ready')"
+            ],
+            "execution_count": None,
+            "outputs": []
+        },
+        {
+            "cell_type": "code",
+            "metadata": {},
+            "source": [
+                "# Training functions\n",
+                "def train_epoch(model, loader, optimizer, scheduler):\n",
+                "    model.train()\n",
+                "    total_loss = 0\n",
+                "    for batch in tqdm(loader, desc='Training'):\n",
+                "        ids, mask, labs = [b.to(DEVICE) for b in batch]\n",
+                "        optimizer.zero_grad()\n",
+                "        loss = model(input_ids=ids, attention_mask=mask, labels=labs).loss\n",
+                "        total_loss += loss.item()\n",
+                "        loss.backward()\n",
+                "        optimizer.step()\n",
+                "        scheduler.step()\n",
+                "    return total_loss / len(loader)\n",
+                "\n",
+                "def evaluate(model, loader):\n",
+                "    model.eval()\n",
+                "    total_loss, preds, labs = 0, [], []\n",
+                "    with torch.no_grad():\n",
+                "        for batch in tqdm(loader, desc='Evaluating'):\n",
+                "            ids, mask, labels = [b.to(DEVICE) for b in batch]\n",
+                "            out = model(input_ids=ids, attention_mask=mask, labels=labels)\n",
+                "            total_loss += out.loss.item()\n",
+                "            preds.extend(torch.argmax(out.logits, dim=-1).cpu().numpy())\n",
+                "            labs.extend(labels.cpu().numpy())\n",
+                "    return {'loss': total_loss/len(loader), 'precision': precision_score(labs, preds, average='binary', zero_division=0), 'recall': recall_score(labs, preds, average='binary', zero_division=0), 'f1': f1_score(labs, preds, average='binary', zero_division=0), 'confusion_matrix': confusion_matrix(labs, preds, labels=[0,1]).tolist()}\n",
+                "\n",
+                "print('Functions defined')"
+            ],
+            "execution_count": None,
+            "outputs": []
+        },
+        {
+            "cell_type": "code",
+            "metadata": {},
+            "source": [
+                "# Training loop\n",
+                "print('\\n'+'='*60+'\\n🚀 Training\\n'+'='*60)\n",
+                "history = []\n",
+                "for epoch in range(CONFIG['epochs']):\n",
+                "    print(f'\\nEpoch {epoch+1}/{CONFIG[\"epochs\"]}')\n",
+                "    train_loss = train_epoch(model, train_loader, optimizer, scheduler)\n",
+                "    val_metrics = evaluate(model, val_loader)\n",
+                "    print(f'Train Loss: {train_loss:.4f} | Val Loss: {val_metrics[\"loss\"]:.4f} | P: {val_metrics[\"precision\"]:.4f} | R: {val_metrics[\"recall\"]:.4f} | F1: {val_metrics[\"f1\"]:.4f}')\n",
+                "    history.append({'epoch': epoch+1, 'train_loss': train_loss, **val_metrics})\n",
+                "print('\\n✅ Training complete!')"
+            ],
+            "execution_count": None,
+            "outputs": []
+        },
+        {
+            "cell_type": "code",
+            "metadata": {},
+            "source": [
+                "# Final evaluation\n",
+                "print('\\n'+'='*60+'\\n🎯 Test Evaluation\\n'+'='*60)\n",
+                "test_metrics = evaluate(model, test_loader)\n",
+                "print(f'\\nPrecision: {test_metrics[\"precision\"]:.4f}')\n",
+                "print(f'Recall: {test_metrics[\"recall\"]:.4f}')\n",
+                "print(f'F1 Score: {test_metrics[\"f1\"]:.4f}')\n",
+                "print(f'Confusion Matrix: {test_metrics[\"confusion_matrix\"]}')\n",
+                "print(f'\\n{\"✅ PASSED\" if test_metrics[\"precision\"]>=0.9 and test_metrics[\"recall\"]>=0.85 else \"⚠️  Below threshold\"}')"
+            ],
+            "execution_count": None,
+            "outputs": []
+        },
+        {
+            "cell_type": "code",
+            "metadata": {},
+            "source": [
+                "# Save model\n",
+                "os.makedirs(CONFIG['output_dir'], exist_ok=True)\n",
+                "model.save_pretrained(CONFIG['output_dir'])\n",
+                "tokenizer.save_pretrained(CONFIG['output_dir'])\n",
+                "with open(f\"{CONFIG['output_dir']}/metadata.json\", 'w') as f:\n",
+                "    json.dump({'version': '1.0.0', 'training_date': datetime.now().isoformat(), 'performance_metrics': {k:v for k,v in test_metrics.items() if k!='confusion_matrix'}, 'training_config': CONFIG, 'history': history}, f, indent=2)\n",
+                "print(f'\\n💾 Model saved to {CONFIG[\"output_dir\"]}/')\n",
+                "print('\\n📦 Download: Right-click folder → Download')"
+            ],
+            "execution_count": None,
+            "outputs": []
+        },
+        {
+            "cell_type": "code",
+            "metadata": {},
+            "source": ["!zip -r trained_model.zip trained_model/\nprint('✅ Created trained_model.zip')"],
+            "execution_count": None,
+            "outputs": []
+        }
+    ]
+}
+
+with open("train_codebert_model.ipynb", 'w', encoding='utf-8') as f:
+    json.dump(notebook, f, indent=2, ensure_ascii=False)
+
+print("✅ Jupyter notebook created: train_codebert_model.ipynb")
+print("\n📋 Next steps:")
+print("   1. Upload train_codebert_model.ipynb to Google Colab")
+print("   2. Runtime → Change runtime type → GPU")
+print("   3. Runtime → Run all")
+print("   4. Download trained_model.zip")
+print("   5. Extract to model_registry/models/1.0.0/")

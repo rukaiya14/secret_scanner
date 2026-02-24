@@ -5,3 +5,16 @@ pandas>=2.0.0
 openpyxl>=3.1.0
 regex>=2023.0.0
 hypothesis>=6.82.0
+
+# ML-Enhanced Secret Scanner Dependencies
+transformers>=4.30.0
+torch>=2.0.0
+tokenizers>=0.13.0
+shap>=0.42.0
+lime>=0.2.0
+pytest>=7.4.0
+pytest-cov>=4.1.0
+pyyaml>=6.0
+requests>=2.31.0
+numpy>=1.24.0
+prometheus-client>=0.17.0

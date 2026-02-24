@@ -1,0 +1,84 @@
+{
+  "version": "2.0.0",
+  "training_date": "2026-02-22T11:58:06.918536",
+  "dataset_info": {
+    "total_samples": 6000,
+    "secrets": 3000,
+    "non_secrets": 3000,
+    "source": "Real leaked secrets from public repos"
+  },
+  "performance_metrics": {
+    "loss": 0.0001847590110468956,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+  },
+  "training_config": {
+    "model_name": "microsoft/codebert-base",
+    "epochs": 3,
+    "learning_rate": 2e-05,
+    "batch_size": 16,
+    "max_length": 512,
+    "warmup_steps": 500,
+    "output_dir": "trained_model",
+    "target_secrets": 3000,
+    "target_non_secrets": 3000,
+    "repos_to_scan": 50
+  },
+  "history": [
+    {
+      "epoch": 1,
+      "train_loss": 0.2690779191340911,
+      "loss": 0.0015955951162859013,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "confusion_matrix": [
+        [
+          418,
+          0
+        ],
+        [
+          0,
+          482
+        ]
+      ]
+    },
+    {
+      "epoch": 2,
+      "train_loss": 0.0015673212020502147,
+      "loss": 0.0002895586913565925,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "confusion_matrix": [
+        [
+          418,
+          0
+        ],
+        [
+          0,
+          482
+        ]
+      ]
+    },
+    {
+      "epoch": 3,
+      "train_loss": 0.0004960356728163169,
+      "loss": 0.000184662957173331,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "confusion_matrix": [
+        [
+          418,
+          0
+        ],
+        [
+          0,
+          482
+        ]
+      ]
+    }
+  ]
+}

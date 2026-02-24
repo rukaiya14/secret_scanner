@@ -1,0 +1,19 @@
+# Test file with PII and secrets
+
+# Email addresses
+Contact: john.doe@company.com
+Support: support@example.org
+
+# Phone numbers
+Call us: (555) 123-4567
+Mobile: +1-555-987-6543
+
+# Credit card (fake)
+Card: 4532-1234-5678-9010
+
+# AWS Key (fake but realistic)
+AWS_ACCESS_KEY_ID=AKIAI44QH8DHBEX7AMPLE
+AWS_SECRET_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+
+# Social Security Number (fake)
+SSN: 123-45-6789

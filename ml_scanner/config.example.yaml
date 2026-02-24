@@ -1,0 +1,61 @@
+# Example configuration for ML-Enhanced Secret Scanner
+# Copy this file to config.yaml and customize as needed
+
+ml_scanner:
+  # Confidence thresholds for detection decisions
+  confidence_thresholds:
+    blocking: 0.90  # Block commits with confidence >= this value
+    warning: 0.85   # Warn for detections with confidence >= this value
+  
+  # Timeout values (in seconds)
+  timeouts:
+    inference: 5        # Maximum time for ML inference per file
+    explanation: 2      # Maximum time for explanation generation
+    commit_scan: 10     # Maximum time for git commit scan
+  
+  # Enable/disable detection categories
+  detection_categories:
+    API_KEY: true
+    PASSWORD: true
+    PII: true
+    TOKEN: true
+    CERTIFICATE: true
+    OTHER: true
+  
+  # Batch size for inference
+  batch_size: 16
+  
+  # Explainer backend: SHAP or LIME
+  explainer_backend: SHAP
+  
+  # Device for inference: auto, cpu, or cuda
+  device: auto
+
+# Model registry configuration
+model_registry:
+  storage_path: ./model_registry
+  max_versions: 5
+  cache_enabled: true
+
+# Training configuration
+training:
+  epochs: 3
+  learning_rate: 0.00002  # 2e-5
+  batch_size: 16
+  max_sequence_length: 512
+  class_balance_ratio: 3.0
+  augmentation_enabled: true
+  min_precision: 0.90
+  min_recall: 0.85
+
+# Monitoring configuration
+monitoring:
+  metrics_enabled: true
+  prometheus_port: 9090
+  daily_reports: true
+
+# Alerting configuration
+alerting:
+  slack_webhook_url: null  # Set to your Slack webhook URL
+  retry_attempts: 3
+  retry_backoff: [1, 2, 4]  # Exponential backoff in seconds
